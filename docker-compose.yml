@@ -1,0 +1,50 @@
+# Full stack in containers:  docker compose up --build   →   http://localhost:8080
+# Seed the demo account:     docker compose run --rm seed
+services:
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      target: api
+    environment:
+      # Plain HTTP on localhost, so skip production's Secure-cookie requirement.
+      NODE_ENV: development
+      MONGODB_URI: mongodb://mongo:27017/workgrid
+      CLIENT_URL: http://localhost:8080
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-compose-secret-change-me-please}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+
+  seed:
+    profiles: [tools]
+    build:
+      context: .
+      target: build
+    command: pnpm seed
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/workgrid
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:

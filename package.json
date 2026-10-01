@@ -1,0 +1,23 @@
+{
+  "name": "workgrid",
+  "private": true,
+  "version": "0.1.0",
+  "description": "WorkGrid — multi-tenant project management SaaS (MERN + TypeScript)",
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter \"./apps/*\" dev",
+    "dev:api": "pnpm --filter @workgrid/api dev",
+    "dev:web": "pnpm --filter @workgrid/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "seed": "pnpm --filter @workgrid/api seed",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

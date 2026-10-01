@@ -1,0 +1,148 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Components are written against semantic tokens (bg-surface, text-muted, …),
+ * so dark mode is a variable swap rather than a `dark:` prefix on every class.
+ */
+@theme inline {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-fg: var(--brand-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  /* Chart roles (validated categorical slots 1 and 2 + chrome). */
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-grid: var(--grid);
+
+  --shadow-pop: 0 10px 38px -10px rgb(0 0 0 / 0.35), 0 10px 20px -15px rgb(0 0 0 / 0.2);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --hover: #f0f0f2;
+  --line: #e6e6ea;
+  --line-strong: #d3d3d9;
+  --fg: #16161a;
+  --muted: #5c5c66;
+  --subtle: #8b8b96;
+  --brand: #5b5bd6;
+  --brand-hover: #4c4cc4;
+  --brand-soft: #ededfc;
+  --brand-fg: #4747b8;
+  --danger: #d03b3b;
+  --danger-soft: #fdecec;
+  --success: #0a7a0a;
+  --warning: #a86400;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --grid: #e6e6ea;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #0e0e10;
+  --surface: #17171a;
+  --raised: #1e1e22;
+  --hover: #25252a;
+  --line: #2a2a30;
+  --line-strong: #3a3a42;
+  --fg: #f2f2f4;
+  --muted: #a5a5b0;
+  --subtle: #74747f;
+  --brand: #6e6ade;
+  --brand-hover: #7f7be6;
+  --brand-soft: #25244a;
+  --brand-fg: #b3b0f5;
+  --danger: #e66767;
+  --danger-soft: #3a1e1e;
+  --success: #3ec23e;
+  --warning: #fab219;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --grid: #2a2a30;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-fg font-sans text-sm antialiased;
+  }
+  /* Tailwind v4 resets buttons to the default cursor. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--brand-soft);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+@keyframes slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.animate-pop {
+  animation: pop-in 140ms ease-out;
+}
+.animate-slide {
+  animation: slide-in 180ms ease-out;
+}
+.animate-fade {
+  animation: fade-in 140ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pop,
+  .animate-slide,
+  .animate-fade {
+    animation: none;
+  }
+}

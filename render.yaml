@@ -1,0 +1,25 @@
+# Render blueprint for the API (free web service). Create it from the dashboard
+# with "New > Blueprint" and fill in the env vars marked `sync: false`.
+services:
+  - type: web
+    name: workgrid-api
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workgrid/api build
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false # MongoDB Atlas free cluster connection string
+      - key: CLIENT_URL
+        sync: false # e.g. https://workgrid.vercel.app
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
