@@ -87,7 +87,13 @@ Copy `apps/api/.env.example` to `apps/api/.env` to override defaults.
 | `JWT_ACCESS_SECRET` | Required in production |
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET` | Optional. Without them the billing page shows plans and usage but checkout is disabled |
 
-**Stripe (test mode):** create a recurring price for a "Pro" product, put its id in `STRIPE_PRICE_PRO`, and forward webhooks locally with `stripe listen --forward-to localhost:4000/api/billing/webhook`.
+**Stripe (test mode):**
+
+1. Put your `sk_test_…` key in `apps/api/.env` as `STRIPE_SECRET_KEY`.
+2. Run `pnpm --filter @workgrid/api stripe:setup`. It creates the "WorkGrid Pro" product, its $12/month price and a Customer Portal configuration, then prints the price id for `STRIPE_PRICE_PRO`. It refuses to run with a live key and is safe to re-run.
+3. Restart the API, create a workspace you own, and upgrade with the test card `4242 4242 4242 4242`.
+
+No webhook forwarding is needed locally. When the browser returns from Checkout or the portal, the client calls `POST /billing/sync`, which re-reads the workspace's latest subscription from Stripe. In production, also add a webhook endpoint for `/api/billing/webhook` (events `checkout.session.completed` and `customer.subscription.*`) and set `STRIPE_WEBHOOK_SECRET`, so changes made outside the app, such as a renewal failing, are picked up too.
 
 ## Deploying for free
 

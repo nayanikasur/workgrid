@@ -3,7 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import { env } from '../config/env';
 import { AppError, badRequest } from '../lib/errors';
 import { authUserId, requirePermission, tenantOf } from '../middleware/auth';
-import { Membership } from '../models/Organization';
+import { Membership, Organization } from '../models/Organization';
 import { Project } from '../models/Project';
 import { User } from '../models/User';
 import { audit } from '../services/audit';
@@ -62,9 +62,35 @@ billingRouter.post('/portal', requirePermission('billing:manage'), async (req, r
   if (!org.stripeCustomerId) throw badRequest('This workspace has no billing account yet');
   const session = await stripe().billingPortal.sessions.create({
     customer: org.stripeCustomerId,
-    return_url: `${env.clientOrigins[0]}/${org.slug}/settings/billing`,
+    return_url: `${env.clientOrigins[0]}/${org.slug}/settings/billing?portal=returned`,
   });
   res.json({ url: session.url });
+});
+
+/**
+ * Pulls the workspace's latest subscription straight from Stripe. The client
+ * calls this on return from Checkout or the portal, so the plan updates at once
+ * even when webhooks are delayed or (in local development) not forwarded at all.
+ */
+billingRouter.post('/sync', requirePermission('billing:manage'), async (req, res) => {
+  assertBillingEnabled();
+  const { org } = tenantOf(req);
+  if (!org.stripeCustomerId) throw badRequest('This workspace has no billing account yet');
+
+  // Newest first, and scoped to this org's own customer, so nothing client-supplied is trusted.
+  const [latest] = (await stripe().subscriptions.list({ customer: org.stripeCustomerId, status: 'all', limit: 1 })).data;
+  const before = org.plan;
+  if (latest) await syncSubscription(latest);
+
+  const updated = await Organization.findById(org._id);
+  if (updated && updated.plan !== before) {
+    await audit(req, {
+      action: updated.plan === 'pro' ? 'billing.upgraded' : 'billing.downgraded',
+      entityType: 'billing',
+      summary: updated.plan === 'pro' ? 'upgraded the workspace to Pro' : 'moved the workspace to the Free plan',
+    });
+  }
+  res.json({ plan: updated?.plan ?? before });
 });
 
 /**

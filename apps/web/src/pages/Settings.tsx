@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PLANS, PLAN_IDS, updateOrgSchema, type PlanDefinition } from '@workgrid/shared';
+import { PLANS, PLAN_IDS, updateOrgSchema, type PlanDefinition, type PlanId } from '@workgrid/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Check, Info } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -141,22 +141,32 @@ function BillingSettings() {
   const [redirecting, setRedirecting] = useState(false);
   const { data: usage, isPending } = useUsage();
   const checkout = params.get('checkout');
+  const fromPortal = params.get('portal') === 'returned';
+  const handledReturn = useRef(false);
 
-  // Back from Stripe: the webhook may land a moment after the redirect, so re-sync.
+  // Back from Stripe Checkout or the portal: ask the API to re-read the
+  // subscription from Stripe rather than waiting for a webhook.
   useEffect(() => {
-    if (!checkout) return;
-    if (checkout === 'success') {
-      toast.success('Payment received. Your plan updates in a few seconds.');
-      const timer = setTimeout(() => {
-        void reloadOrgs();
-        void queryClient.invalidateQueries({ queryKey: keys.usage(org.slug) });
-      }, 2500);
-      setParams({}, { replace: true });
-      return () => clearTimeout(timer);
-    }
-    toast.info('Checkout cancelled. You have not been charged.');
+    if ((!checkout && !fromPortal) || handledReturn.current) return;
+    handledReturn.current = true; // StrictMode runs effects twice in development
     setParams({}, { replace: true });
-  }, [checkout, org.slug, queryClient, reloadOrgs, setParams]);
+    if (checkout === 'cancelled') {
+      toast.info('Checkout cancelled. You have not been charged.');
+      return;
+    }
+    void (async () => {
+      try {
+        const { plan } = await api.post<{ plan: PlanId }>(`${base}/billing/sync`);
+        await Promise.all([reloadOrgs(), queryClient.invalidateQueries({ queryKey: keys.usage(org.slug) })]);
+        if (checkout === 'success') {
+          if (plan === 'pro') toast.success('You’re on Pro. Limits are lifted for the whole workspace.');
+          else toast.info('Your payment is still processing. The plan will update shortly.');
+        }
+      } catch (err) {
+        toast.error(errorMessage(err));
+      }
+    })();
+  }, [checkout, fromPortal, base, org.slug, queryClient, reloadOrgs, setParams]);
 
   const goToStripe = async (endpoint: 'checkout' | 'portal') => {
     setRedirecting(true);
